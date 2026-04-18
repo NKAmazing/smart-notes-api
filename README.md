@@ -1,39 +1,39 @@
 # Smart Notes API
 
-API REST con **FastAPI** que analiza texto libre de una nota y devuelve un análisis estructurado: **resumen**, **puntos clave**, **tono** y qué **proveedor LLM** procesó la petición.
+A **FastAPI** REST API that analyzes free-form note text and returns structured insights: **summary**, **key points**, **tone**, and which **LLM provider** handled the request.
 
-Los modelos se integran de forma **pluggable** (Groq, OpenAI, Gemini) mediante un único flujo de negocio y validación con **Pydantic**.
-
----
-
-## Stack tecnológico
-
-| Componente | Uso |
-|------------|-----|
-| **Python 3.10+** (recomendado; 3.9 puede funcionar con advertencias de dependencias) | Lenguaje |
-| **FastAPI** | Framework HTTP, validación de entrada/salida, OpenAPI/Swagger |
-| **Uvicorn** | Servidor ASGI |
-| **Pydantic v2** | Esquemas `AnalyzeRequest` / `AnalyzeResponse` |
-| **python-dotenv** | Carga de variables desde `.env` al arrancar |
-| **openai** (SDK oficial) | Cliente **OpenAI** y proveedores **compatibles con la API de OpenAI** (p. ej. **Groq** vía `base_url`) |
-| **google-genai** | Cliente **Google Gemini** (API de desarrollador) |
+Models are integrated in a **pluggable** way (Groq, OpenAI, Gemini) through a single business flow and **Pydantic** validation.
 
 ---
 
-## Estructura del proyecto
+## Tech stack
+
+| Component | Role |
+|-----------|------|
+| **Python 3.10+** (recommended; 3.9 may work with dependency warnings) | Language |
+| **FastAPI** | HTTP framework, request/response validation, OpenAPI/Swagger |
+| **Uvicorn** | ASGI server |
+| **Pydantic v2** | `AnalyzeRequest` / `AnalyzeResponse` schemas |
+| **python-dotenv** | Load variables from `.env` on startup |
+| **openai** (official SDK) | **OpenAI** client and **OpenAI API–compatible** providers (e.g. **Groq** via `base_url`) |
+| **google-genai** | **Google Gemini** client (developer API) |
+
+---
+
+## Project layout
 
 ```
 smart-notes-api/
 ├── app/
-│   ├── main.py                 # App FastAPI, carga de .env
-│   ├── exceptions.py           # AnalysisError (errores de negocio → HTTP)
+│   ├── main.py                 # FastAPI app, .env loading
+│   ├── exceptions.py           # AnalysisError (business errors → HTTP)
 │   ├── routers/
 │   │   └── notes.py            # POST /analyze
 │   ├── schemas/
-│   │   └── notes.py            # Modelos Pydantic de request/response
+│   │   └── notes.py            # Pydantic request/response models
 │   └── services/
-│       ├── notes_service.py    # Orquesta analyze_note → analyze_text
-│       └── llm_provider.py     # Proveedores LLM, prompt, fallback
+│       ├── notes_service.py    # Wires analyze_note → analyze_text
+│       └── llm_provider.py     # LLM providers, prompt, fallback
 ├── requirements.txt
 ├── LICENSE.md
 └── README.md
@@ -41,9 +41,9 @@ smart-notes-api/
 
 ---
 
-## Configuración rápida
+## Quick setup
 
-### 1. Entorno virtual
+### 1. Virtual environment
 
 ```bash
 python3 -m venv .venv
@@ -51,107 +51,107 @@ source .venv/bin/activate   # macOS / Linux
 # .venv\Scripts\activate    # Windows
 ```
 
-### 2. Dependencias
+### 2. Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Variables de entorno
+### 3. Environment variables
 
-Copiá `app/.env.example` a `app/.env` (o usá un `.env` en la raíz del repo) y completá las claves que vayas a usar.
+Copy `app/.env.example` to `app/.env` (or use a `.env` at the repo root) and fill in the keys you plan to use.
 
-Al iniciar, `app/main.py` carga en orden:
+On startup, `app/main.py` loads, in order:
 
 1. `app/.env`
-2. `.env` en la raíz del proyecto
+2. `.env` at the project root
 
-Las variables no definidas en el sistema se leen desde ahí.
+Variables not set in the shell are read from these files.
 
-### 4. Arranque
+### 4. Run the server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-API base: `http://127.0.0.1:8000`
+Base URL: `http://127.0.0.1:8000`
 
 ---
 
-## Proveedores LLM y variables
+## LLM providers and variables
 
-El comportamiento central está en `app/services/llm_provider.py`.
+Core behavior lives in `app/services/llm_provider.py`.
 
-### Selección de proveedor
+### Provider selection
 
-| Variable | Valores | Por defecto |
-|----------|---------|-------------|
+| Variable | Values | Default |
+|----------|--------|---------|
 | `LLM_PROVIDER` | `groq`, `openai`, `gemini` | `groq` |
-| `LLM_FALLBACK_ENABLED` | `true` / `false` (y equivalentes `1`, `yes`, `on`) | `true` |
+| `LLM_FALLBACK_ENABLED` | `true` / `false` (and equivalents `1`, `yes`, `on`) | `true` |
 
-- **`LLM_PROVIDER`** define qué backend se intenta **primero**.
-- Si **`LLM_FALLBACK_ENABLED=true`**, ante un fallo (error de API, cuota, etc.) se prueban **otros proveedores** en orden fijo: **groq → openai → gemini**, pero **solo si existe API key** para ese proveedor. El campo **`llm_provider`** en la respuesta indica cuál respondió con éxito (útil si hubo fallback).
+- **`LLM_PROVIDER`** sets which backend is tried **first**.
+- If **`LLM_FALLBACK_ENABLED=true`**, after a failure (API error, quota, etc.) **other providers** are tried in a fixed order: **groq → openai → gemini**, but **only if an API key exists** for that provider. The **`llm_provider`** field in the response shows which one succeeded (useful when fallback ran).
 
-### Claves y modelos por proveedor
+### Keys and models per provider
 
-| Proveedor | Variables | Modelo por defecto (si no definís otro) |
-|-----------|-----------|----------------------------------------|
-| **Groq** | `GROQ_API_KEY`, opcional `GROQ_MODEL` | `llama-3.3-70b-versatile` |
-| **OpenAI** | `OPENAI_API_KEY`, opcional `OPENAI_MODEL` | `gpt-4o-mini` |
-| **Gemini** | `GEMINI_API_KEY` o `GOOGLE_API_KEY`, opcional `GEMINI_MODEL` | `gemini-2.0-flash` |
+| Provider | Variables | Default model (if not overridden) |
+|----------|-----------|-----------------------------------|
+| **Groq** | `GROQ_API_KEY`, optional `GROQ_MODEL` | `llama-3.3-70b-versatile` |
+| **OpenAI** | `OPENAI_API_KEY`, optional `OPENAI_MODEL` | `gpt-4o-mini` |
+| **Gemini** | `GEMINI_API_KEY` or `GOOGLE_API_KEY`, optional `GEMINI_MODEL` | `gemini-2.0-flash` |
 
-- **Groq**: clave en [console.groq.com/keys](https://console.groq.com/keys). El cliente usa la API compatible con OpenAI con `base_url` fija: `https://api.groq.com/openai/v1` (no hace falta ponerla en el `.env`).
-- **OpenAI**: clave en [platform.openai.com](https://platform.openai.com).
-- **Gemini**: clave en [Google AI Studio](https://aistudio.google.com/apikey); SDK: `google-genai`.
+- **Groq**: key at [console.groq.com/keys](https://console.groq.com/keys). The client uses the OpenAI-compatible API with a fixed `base_url`: `https://api.groq.com/openai/v1` (you do not need to set it in `.env`).
+- **OpenAI**: key at [platform.openai.com](https://platform.openai.com).
+- **Gemini**: key at [Google AI Studio](https://aistudio.google.com/apikey); SDK: `google-genai`.
 
-Si ningún proveedor tiene clave configurada, la API responde con error indicando que falta configuración.
-
----
-
-## Cómo funciona el cliente LLM (resumen técnico)
-
-1. **`analyze_text(text)`** (`llm_provider.py`) elige proveedor según `LLM_PROVIDER` y aplica fallback opcional.
-2. **OpenAI y Groq** comparten la misma ruta: cliente **`OpenAI`** del SDK oficial; Groq solo cambia `api_key` y `base_url`.
-3. **Gemini** usa el cliente **`google.genai`** (`genai.Client`), `generate_content` con `response_mime_type="application/json"` y `system_instruction` con el mismo texto de sistema que los demás.
-4. Se pide al modelo salida **solo JSON** con campos fijos (ver prompt abajo). Donde el proveedor lo permite, se usa **`response_format: { "type": "json_object" }`** (OpenAI-compatible).
-5. El JSON se parsea; se valida contra un modelo interno `_LLMJsonOutput` (summary, key_points, tone) y luego se arma **`AnalyzeResponse`** añadiendo **`llm_provider`** con el id del backend que respondió.
-
-Los errores de proveedor se encapsulan en **`AnalysisError`** (`app/exceptions.py`) con `status_code` y `message`; el router los convierte en **`HTTPException`** para el cliente HTTP.
+If no provider has a configured key, the API returns an error indicating missing configuration.
 
 ---
 
-## Prompt del sistema (proveedor)
+## How the LLM client works (technical overview)
 
-El prompt vive en **`SYSTEM_PROMPT`** dentro de `llm_provider.py`. Pide explícitamente un **único objeto JSON** sin markdown, con:
+1. **`analyze_text(text)`** (`llm_provider.py`) picks a provider from `LLM_PROVIDER` and applies optional fallback.
+2. **OpenAI and Groq** share the same path: the official **`OpenAI`** SDK client; Groq only differs by `api_key` and `base_url`.
+3. **Gemini** uses the **`google.genai`** client (`genai.Client`), `generate_content` with `response_mime_type="application/json"` and `system_instruction` using the same system text as the others.
+4. The model is asked for **JSON-only** output with fixed fields (see prompt below). Where supported, **`response_format: { "type": "json_object" }`** is used (OpenAI-compatible).
+5. JSON is parsed, validated against an internal `_LLMJsonOutput` model (`summary`, `key_points`, `tone`), then **`AnalyzeResponse`** is built by adding **`llm_provider`** with the id of the backend that responded.
+
+Provider errors are wrapped in **`AnalysisError`** (`app/exceptions.py`) with `status_code` and `message`; the router maps them to **`HTTPException`** for HTTP clients.
+
+---
+
+## System prompt (provider)
+
+The prompt is defined as **`SYSTEM_PROMPT`** in `llm_provider.py`. It asks for a **single JSON object** with no markdown, containing:
 
 - `summary` (string)
-- `key_points` (array de strings)
+- `key_points` (array of strings)
 - `tone` (string)
 
-Para modificar el comportamiento del análisis, editá ese bloque (y, si cambiás la forma del JSON, actualizá los esquemas Pydantic en consecuencia).
+To change analysis behavior, edit that block (and if you change the JSON shape, update the Pydantic schemas accordingly).
 
 ---
 
-## Esquemas (Pydantic)
+## Schemas (Pydantic)
 
-Definidos en `app/schemas/notes.py` (usados en Swagger/ReDoc y en validación):
+Defined in `app/schemas/notes.py` (used in Swagger/ReDoc and validation):
 
-| Modelo | Rol |
-|--------|-----|
-| **`AnalyzeRequest`** | Entrada: `text` (string, mínimo 1 carácter). |
-| **`AnalyzeResponse`** | Salida: `summary`, `key_points`, `tone`, **`llm_provider`** (identificador del backend: p. ej. `groq`, `openai`, `gemini`). |
+| Model | Role |
+|-------|------|
+| **`AnalyzeRequest`** | Input: `text` (string, minimum 1 character). |
+| **`AnalyzeResponse`** | Output: `summary`, `key_points`, `tone`, **`llm_provider`** (backend id: e.g. `groq`, `openai`, `gemini`). |
 
-El router **no** cambia: sigue devolviendo `AnalyzeResponse` en `POST /analyze`.
+The router is unchanged: it still returns `AnalyzeResponse` on `POST /analyze`.
 
 ---
 
-## API HTTP
+## HTTP API
 
 ### `GET /`
 
-Comprueba que el servicio está arriba.
+Health check.
 
-**Respuesta ejemplo:**
+**Example response:**
 
 ```json
 {
@@ -162,15 +162,15 @@ Comprueba que el servicio está arriba.
 
 ### `POST /analyze`
 
-**Cuerpo:**
+**Body:**
 
 ```json
 {
-  "text": "Hoy la reunión de equipo fue productiva; definimos prioridades para el trimestre."
+  "text": "Today's team meeting was productive; we set priorities for the quarter."
 }
 ```
 
-**Respuesta ejemplo (forma actual):**
+**Example response (current shape):**
 
 ```json
 {
@@ -181,40 +181,40 @@ Comprueba que el servicio está arriba.
 }
 ```
 
-Errores habituales: `401` / `429` / `502` / `503` / `504` según autenticación, límites, fallos del proveedor o configuración ausente. El cuerpo suele incluir `detail` con un mensaje legible.
+Common errors: `401` / `429` / `502` / `503` / `504` depending on authentication, limits, provider failures, or missing configuration. The body usually includes `detail` with a readable message.
 
 ---
 
-## Documentación interactiva (OpenAPI)
+## Interactive docs (OpenAPI)
 
-| Interfaz | URL |
-|----------|-----|
+| UI | URL |
+|----|-----|
 | Swagger UI | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) |
 | ReDoc | [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) |
 
 ---
 
-## Billing y límites (expectativas realistas)
+## Billing and limits (realistic expectations)
 
-Ningún proveedor garantiza uso ilimitado gratis de por vida; las políticas cambian. En la práctica:
+No provider guarantees unlimited free usage forever; policies change. In practice:
 
-- **Groq**, **Google AI (Gemini)** y **OpenAI** suelen ofrecer **capas gratuitas o de prueba** con **límites** (por minuto, por día, por proyecto).
-- Mensajes del tipo **rate limit** o **quota exceeded** suelen indicar que tocó el techo del plan gratuito, que hace falta esperar, o que el proyecto pide **habilitar facturación** para subir cupos (depende del proveedor y de la cuenta).
-- Para **aprender e integrar** no es obligatorio pagar; para **carga real o producción** conviene revisar en cada consola: **Billing**, **Quotas** y **Usage**.
+- **Groq**, **Google AI (Gemini)**, and **OpenAI** often offer **free or trial tiers** with **limits** (per minute, per day, per project).
+- Messages like **rate limit** or **quota exceeded** usually mean you hit the free tier cap, need to wait, or the project requires **billing** to raise quotas (depends on provider and account).
+- For **learning and integration**, paying is not required; for **real traffic or production**, check each console: **Billing**, **Quotas**, and **Usage**.
 
-Este repositorio no gestiona pagos: solo consume APIs con las claves que configures.
-
----
-
-## Licencia
-
-El código se publica bajo la **licencia MIT**. Ver **[LICENSE.md](./LICENSE.md)**.
+This repository does not handle payments—it only calls APIs with the keys you configure.
 
 ---
 
-## Ideas para seguir
+## License
 
-- Autenticación (API key propia de tu backend, JWT, etc.)
-- Persistencia de notas en base de datos
-- Tests automatizados (pytest) con respuestas mockeadas del LLM
-- Despliegue (Docker, Railway, Fly.io, etc.)
+The code is released under the **MIT License**. See **[LICENSE.md](./LICENSE.md)**.
+
+---
+
+## Possible next steps
+
+- Authentication (your own API key, JWT, etc.)
+- Persist notes in a database
+- Automated tests (pytest) with mocked LLM responses
+- Deployment (Docker, Railway, Fly.io, etc.)
