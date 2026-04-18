@@ -13,16 +13,17 @@ load_dotenv(_project_root / ".env")
 app = FastAPI(
     title="Smart Notes API",
     description=(
-        "An intelligent API that analyzes plain-text notes and returns structured insights "
-        "such as summaries, key points, and tone detection. "
-        "AI integration will be added in a future iteration."
+        "Analyzes plain-text notes and returns structured insights: summary, key points, tone, "
+        "and which LLM provider handled the request. Supports Groq, OpenAI, and Gemini via "
+        "`app/services/llm_provider.py`. See README.md for configuration."
     ),
-    version="0.1.0",
+    version="0.2.0",
     contact={
         "name": "Smart Notes Team",
     },
     license_info={
         "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
     },
 )
 
