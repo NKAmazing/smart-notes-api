@@ -1,0 +1,24 @@
+# Entorno y secretos (no subir claves)
+.env
+app/.env
+.env.*
+!.env.example
+!app/.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
