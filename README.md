@@ -212,9 +212,25 @@ The code is released under the **MIT License**. See **[LICENSE.md](./LICENSE.md)
 
 ---
 
+## Deploying on Render (and similar)
+
+Render’s default Python is **3.14.x** for new services. This project pins **Python 3.12** via **`.python-version`** in the repo root so `pip` installs **binary wheels** for `pydantic-core` instead of building from source (building would require Rust and can fail on read-only build environments).
+
+If you override the version in the Render dashboard, set **`PYTHON_VERSION`** to a full version (e.g. `3.12.8`)—see [Render: Python version](https://render.com/docs/python-version).
+
+**Start command** example:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Set **`PORT`** from Render’s environment (Render injects it). Configure LLM keys under **Environment** in the dashboard (same variables as in `.env.example`).
+
+---
+
 ## Possible next steps
 
 - Authentication (your own API key, JWT, etc.)
 - Persist notes in a database
 - Automated tests (pytest) with mocked LLM responses
-- Deployment (Docker, Railway, Fly.io, etc.)
+- Deployment (Docker, Railway, Fly.io, Render, etc.)
